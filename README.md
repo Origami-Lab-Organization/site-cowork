@@ -81,7 +81,7 @@ Ao mudar texto, atualize `CONTENT_UPDATED` em `site.ts` (vira o `lastmod` do sit
 
 | Quando | O quê |
 | --- | --- |
-| A cada deploy | `curl` das URLs acima; conferir que a produção não tem `noindex` |
+| A cada deploy | `curl` das URLs acima; conferir que a produção não tem `noindex`; `npm run indexnow` (avisa Bing/ChatGPT Search das URLs do sitemap) |
 | Semanal (1º mês) | Search Console: páginas indexadas, consultas ("coworking formiga", "sala de reunião formiga"), cliques |
 | Mensal | Fazer as mesmas perguntas ao ChatGPT, Perplexity, Gemini e Google (AI Mode): "coworking em Formiga MG", "onde alugar sala de reunião em Formiga". Registrar se o Hub aparece e qual URL é citada. Atualizar textos e `CONTENT_UPDATED` |
 
