@@ -1,0 +1,50 @@
+#!/usr/bin/env node
+// Avisa Bing/Yandex das URLs do site via IndexNow. O Bing alimenta o índice que
+// o ChatGPT Search e o Copilot consultam, então isto também é GEO. No Google, o
+// pedido de indexação continua sendo o botão da UI do Search Console.
+//
+//   npm run indexnow                          # todas as URLs do sitemap
+//   npm run indexnow -- /coworking /sobre     # caminhos específicos
+//
+// Rode depois do deploy: a chave (public/<chave>.txt) precisa estar publicada.
+import { readdirSync } from "node:fs";
+
+const HOST = "cowork.origamilab.com.br";
+const BASE_URL = `https://${HOST}`;
+
+// A chave é o nome do arquivo em public/ — a verificação do IndexNow é servir
+// <chave>.txt contendo a própria chave.
+function lerChave() {
+  const arquivo = readdirSync("public").find((nome) => /^[0-9a-f]{32}\.txt$/.test(nome));
+  if (!arquivo) throw new Error("chave do IndexNow não encontrada em public/");
+  return arquivo.replace(".txt", "");
+}
+
+async function urlsDoSitemap() {
+  const resposta = await fetch(`${BASE_URL}/sitemap.xml`);
+  if (!resposta.ok) throw new Error(`sitemap: ${resposta.status}`);
+  return [...(await resposta.text()).matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
+}
+
+const caminhos = process.argv.slice(2);
+const urlList = caminhos.length > 0
+  ? caminhos.map((c) => (c.startsWith("http") ? c : `${BASE_URL}${c.startsWith("/") ? c : `/${c}`}`))
+  : await urlsDoSitemap();
+
+const key = lerChave();
+const verificacao = await fetch(`${BASE_URL}/${key}.txt`);
+if (!verificacao.ok || (await verificacao.text()).trim() !== key) {
+  throw new Error(`${BASE_URL}/${key}.txt não serve a chave — o IndexNow vai recusar`);
+}
+
+const resposta = await fetch("https://api.indexnow.org/indexnow", {
+  method: "POST",
+  headers: { "Content-Type": "application/json; charset=utf-8" },
+  body: JSON.stringify({ host: HOST, key, keyLocation: `${BASE_URL}/${key}.txt`, urlList }),
+});
+
+console.log(`IndexNow: ${resposta.status} ${resposta.statusText} — ${urlList.length} URLs`);
+if (resposta.status !== 200 && resposta.status !== 202) {
+  console.error(await resposta.text());
+  process.exit(1);
+}
